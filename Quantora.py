@@ -159,12 +159,24 @@ with col_input:
 if st.button("RUN QUANT ANALYSIS", use_container_width=True):
     with st.spinner("Synchronizing with Market Nodes..."):
         try:
+
+
+try:
             # 1. Fetching Market Data
             url = f'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={symbol}&apikey={ALPHA_VANTAGE_KEY}'
             data = requests.get(url).json()
             
-            # Map Alpha Vantage fields into a structured financial dataframe
+            # --- THE "STAY ALIVE" GATEKEEPER ---
+            if "Time Series (Daily)" not in data:
+                if "Note" in data:
+                    st.warning("⚠️ Alpha Vantage Daily Limit Reached (25 calls). Try again tomorrow!")
+                else:
+                    st.error(f"🚨 Market Data Unavailable: {data.get('Error Message', 'Unknown Error')}")
+                st.stop()
+            # -----------------------------------
+
             raw_series = data['Time Series (Daily)']
+            # ... (rest of your records loop and plotting code)
             records = []
             for date_str, metrics in raw_series.items():
                 records.append({
@@ -175,6 +187,7 @@ if st.button("RUN QUANT ANALYSIS", use_container_width=True):
                     "Close": float(metrics["4. close"]),
                     "Volume": float(metrics["5. volume"])
                 })
+
             
             df = pd.DataFrame(records)
             df['Date'] = pd.to_datetime(df['Date'])
