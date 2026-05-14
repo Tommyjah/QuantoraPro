@@ -159,9 +159,6 @@ with col_input:
 if st.button("RUN QUANT ANALYSIS", use_container_width=True):
     with st.spinner("Synchronizing with Market Nodes..."):
         try:
-
-
-try:
             # 1. Fetching Market Data
             url = f'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={symbol}&apikey={ALPHA_VANTAGE_KEY}'
             data = requests.get(url).json()
@@ -176,7 +173,6 @@ try:
             # -----------------------------------
 
             raw_series = data['Time Series (Daily)']
-            # ... (rest of your records loop and plotting code)
             records = []
             for date_str, metrics in raw_series.items():
                 records.append({
@@ -188,7 +184,6 @@ try:
                     "Volume": float(metrics["5. volume"])
                 })
 
-            
             df = pd.DataFrame(records)
             df['Date'] = pd.to_datetime(df['Date'])
             df.set_index('Date', inplace=True)
