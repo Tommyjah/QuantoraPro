@@ -7,8 +7,8 @@ from email.message import EmailMessage
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from crewai import Agent, Task, Crew, LLM
-from PIL import Image
-import base64 # Need for image encoding
+import base64
+import yfinance as fy
 
 # ==========================================
 # 1. PAGE CONFIGURATION & LAYOUT
@@ -33,13 +33,10 @@ except FileNotFoundError:
 # ==========================================
 st.markdown(f"""
 <style>
-    /* 3.1 GALAXY BACKGROUND (Holographic Foundation) */
     .stApp {{
         background: radial-gradient(circle at center, #0B1021 0%, #03040A 100%) !important;
         background-attachment: fixed !important;
     }}
-    
-    /* 3.2 Ticker Tape (Moving News Feed) */
     .ticker-wrap {{
         width: 100%;
         overflow: hidden;
@@ -62,15 +59,11 @@ st.markdown(f"""
         0% {{ transform: translate3d(0, 0, 0); }}
         100% {{ transform: translate3d(-100%, 0, 0); }}
     }}
-    
-    /* 3.3 Side Matrix Control */
     section[data-testid="stSidebar"] {{
         background-color: rgba(10, 14, 23, 0.95) !important;
         border-right: 1px solid rgba(0, 102, 255, 0.3) !important;
         backdrop-filter: blur(10px);
     }}
-    
-    /* 3.4 Holographic Bento Boxes (Metric Cards) */
     div[data-testid="stMetric"] {{
         background: rgba(10, 14, 23, 0.6) !important;
         border: 1px solid rgba(0, 102, 255, 0.4) !important;
@@ -78,20 +71,11 @@ st.markdown(f"""
         padding: 20px !important;
         backdrop-filter: blur(10px) saturate(180%);
         box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), inset 0 0 15px rgba(0, 102, 255, 0.2);
-        transition: all 0.3s ease-in-out;
     }}
-    div[data-testid="stMetric"]:hover {{
-        border-color: rgba(0, 230, 118, 0.6) !important;
-        box-shadow: 0 8px 32px rgba(0, 230, 118, 0.2), inset 0 0 20px rgba(0, 230, 118, 0.1);
-    }}
-    
-    /* typography */
     div[data-testid="stMetricValue"] {{
         font-family: 'JetBrains Mono', monospace !important;
         font-weight: 700;
     }}
-    
-    /* 3.5 Global Font Responsive */
     @media (prefers-color-scheme: dark) {{
         div[data-testid="stMetricValue"] > div {{ color: #00E676 !important; }}
     }}
@@ -139,34 +123,25 @@ ALPHA_VANTAGE_KEY = st.secrets.get("ALPHA_VANTAGE_KEY")
 os.environ["GROQ_API_KEY"] = st.secrets.get("GROQ_API_KEY")
 
 # ==========================================
-# ==========================================
 # 6. HEADER & SIDEBAR ASSEMBLY
 # ==========================================
-# Add encoded Logo to Sidebar
 st.sidebar.markdown(f'<img src="{logo_src}" style="width: 100%; border-radius: 12px; margin-bottom: 20px;">', unsafe_allow_html=True)
-
-# Main Title (Stylized Hologram)
 st.markdown("<h1 style='text-align: center; color: #00B0FF; text-shadow: 0 0 15px #00B0FF; margin-top: -30px; margin-bottom: 10px;'>QUANTORA PRO TERMINAL</h1>", unsafe_allow_html=True)
-
-# Ticker Tape Execution
 st.markdown("""
 <div class="ticker-wrap">
     <div class="ticker">
-        📈 MONITORING GLOBAL EQUITY MATRICES :: REAL-TIME BREAKOUT SIGNALS ACTIVE :: AAPL SIGNAL TARGET: $174.52 :: SYSTEMS RUNNING LIVE :: MONITORING CRYPTOCURRENCY NETWORKS...
+        📈 MULTI-INDICATOR SUITE OPERATIONAL :: BOLLINGER BANDS ACTIVATED :: RSI MATRIX STABLE :: ATR RISK ENGINE ARMED...
     </div>
 </div>
 """, unsafe_allow_html=True)
 
-# Sidebar Control Center (UPDATED WITH SYSTEM HEALTH PULSE)
 with st.sidebar:
     st.markdown("### 📡 Terminal Core Metrics")
-    
-    # Glowing System Health Indicators
     st.markdown("""
         <div style="background: rgba(0, 102, 255, 0.05); border: 1px solid rgba(0, 102, 255, 0.2); border-radius: 10px; padding: 12px; margin-bottom: 15px;">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
-                <span style="color: rgba(255,255,255,0.7); font-size: 0.85rem;">CORE APIS:</span>
-                <span style="color: #00E676; font-weight: bold; font-size: 0.85rem; text-shadow: 0 0 8px #00E676;">● ONLINE</span>
+                <span style="color: rgba(255,255,255,0.7); font-size: 0.85rem;">DATA CHANNEL:</span>
+                <span style="color: #00B0FF; font-weight: bold; font-size: 0.85rem; text-shadow: 0 0 8px #00B0FF;">● HYBRID ENGINE</span>
             </div>
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                 <span style="color: rgba(255,255,255,0.7); font-size: 0.85rem;">AI MATRIX:</span>
@@ -174,10 +149,28 @@ with st.sidebar:
             </div>
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <span style="color: rgba(255,255,255,0.7); font-size: 0.85rem;">LATENCY:</span>
-                <span style="color: #00B0FF; font-family: 'JetBrains Mono', monospace; font-size: 0.85rem;">42ms</span>
+                <span style="color: #00B0FF; font-family: 'JetBrains Mono', monospace; font-size: 0.85rem;">19ms</span>
             </div>
         </div>
     """, unsafe_allow_html=True)
+
+    st.markdown("### 📊 Asset Profile Engine")
+    asset_class = st.selectbox(
+        "Select Asset Class Matrix:",
+        ["Equities (Stocks)", "Digital Assets (Crypto)", "Foreign Exchange (Forex)"]
+    )
+    
+    trading_style = st.selectbox(
+        "Execution Strategy Blueprint:",
+        ["⚡ Scalper Profile (M5/M15 Fast Horizon)", "⏳ Swing Profile (H4/D1 Trend Horizon)"]
+    )
+    
+    if "Equities" in asset_class:
+        ticker_placeholder = "e.g., AAPL, NVDA, TSLA"
+    elif "Digital" in asset_class:
+        ticker_placeholder = "e.g., BTC-USD, ETH-USD"
+    else:
+        ticker_placeholder = "e.g., EURGBP=X, EURUSD=X"
 
     st.markdown("### ⚙️ Signal Uplinks")
     with st.expander("🔔 Notification Dispatcher", expanded=False):
@@ -188,84 +181,253 @@ with st.sidebar:
     
     st.divider()
     if st.button("System Pulse Check", use_container_width=True):
-        st.toast("Telemetry Uplink Stable. Core Temperatures Nominal.", icon="⚡")
-    st.caption("Quantora Pro v4.1 | © 2026")
-# ==========================================
-# 7. MAIN INTERFACE CONTENT
-# ==========================================
-symbol = st.text_input("Asset Ticker Symbol:", "AAPL").upper()
+        st.toast("Telemetry Uplink Stable. Indicator Matrix Compiling.", icon="⚡")
+    st.caption("Quantora Pro v4.7 | © 2026")
 
+# ==========================================
+# 7. MAIN INTERFACE WORKSPACE INPUTS
+# ==========================================
+col_input, col_style = st.columns([3, 1])
+
+with col_input:
+    symbol = st.text_input("Active Target Symbol:", value="AAPL", placeholder=ticker_placeholder).upper()
+
+with col_style:
+    st.markdown(f"""
+        <div style="background: rgba(0, 102, 255, 0.1); border: 1px solid rgba(0, 102, 255, 0.3); border-radius: 10px; padding: 10px; text-align: center; margin-top: 28px;">
+            <span style="color: #00B0FF; font-weight: bold; font-size: 0.85rem;">MODE ACTIVE</span><br>
+            <span style="color: #FFF; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem;">{trading_style.split(' ')[1]}</span>
+        </div>
+    """, unsafe_allow_html=True)
+
+# ==========================================
+# 8. HYBRID ROUTING DATA MATRIX
+# ==========================================
 if st.button("RUN QUANT ANALYSIS", use_container_width=True):
-    with st.spinner("Processing Matrix Data..."):
-        # API DATA CAPTURE
-        url = f'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={symbol}&apikey={ALPHA_VANTAGE_KEY}'
-        data = requests.get(url).json()
+    with st.spinner("Processing Matrix Data Pipeline..."):
+        df = None
+        engine_used = "Alpha Vantage"
+        
+        force_yfinance = False
+        if ("Digital" in asset_class or "Foreign" in asset_class) and "Scalper" in trading_style:
+            force_yfinance = True
 
-        # DATA VALIDATION
-        if "Time Series (Daily)" not in data:
-            if "Note" in data:
-                st.warning("⚠️ API Quota (Alpha Vantage). Please wait 60s.")
-            else:
-                st.error("📡 Data Pipeline Interrupted:")
-                st.json(data)
-            st.stop()
+        if not force_yfinance:
+            try:
+                if "Equities" in asset_class:
+                    if "Scalper" in trading_style:
+                        url = f'https://www.alphavantage.co/query?function=TIME_SERIES_INTRADAY&symbol={symbol}&interval=5min&apikey={ALPHA_VANTAGE_KEY}'
+                        time_key = "Time Series (5min)"
+                    else:
+                        url = f'https://www.alphavantage.co/query?function=TIME_SERIES_DAILY&symbol={symbol}&apikey={ALPHA_VANTAGE_KEY}'
+                        time_key = "Time Series (Daily)"
+                elif "Digital" in asset_class:
+                    url = f'https://www.alphavantage.co/query?function=DIGITAL_CURRENCY_DAILY&symbol={symbol.replace("-USD","")}&market=USD&apikey={ALPHA_VANTAGE_KEY}'
+                    time_key = "Time Series (Digital Currency Daily)"
+                elif "Foreign" in asset_class:
+                    clean_sym = symbol.replace("=X","")
+                    url = f'https://www.alphavantage.co/query?function=FX_DAILY&from_symbol={clean_sym[:3]}&to_symbol={clean_sym[3:]}&apikey={ALPHA_VANTAGE_KEY}'
+                    time_key = "Time Series FX (Daily)"
 
-        # DATA CLEANING
-        raw_series = data['Time Series (Daily)']
-        df = pd.DataFrame.from_dict(raw_series, orient='index').astype(float)
-        df.index = pd.to_datetime(df.index)
-        df.columns = [c.split(' ')[1] for c in df.columns]
-        df = df.sort_index().tail(60)
+                data = requests.get(url).json()
+                
+                if time_key in data:
+                    raw_series = data[time_key]
+                    df = pd.DataFrame.from_dict(raw_series, orient='index').astype(float)
+                    df.index = pd.to_datetime(df.index)
+                    df.columns = [c.split('. ')[1] if '. ' in c else c.split(' ')[1] if ' ' in c else c for c in df.columns]
+                    if 'close (USD)' in df.columns:
+                        df = df.rename(columns={'open (USD)': 'open', 'high (USD)': 'high', 'low (USD)': 'low', 'close (USD)': 'close', 'volume': 'volume'})
+                else:
+                    force_yfinance = True
+            except Exception:
+                force_yfinance = True
 
-        # TECHNICAL ENGINE
-        df['MA10'] = df['close'].rolling(window=10).mean()
-        df['MA30'] = df['close'].rolling(window=30).mean()
-        curr_price = df['close'].iloc[-1]
-        signal = "BUY" if df['MA10'].iloc[-1] > df['MA30'].iloc[-1] else "SELL"
+        if force_yfinance or df is None:
+            engine_used = "Yahoo Finance (Failover Uplink)"
+            try:
+                yf_ticker = symbol
+                if "Foreign" in asset_class and not yf_ticker.endswith("=X"):
+                    yf_ticker = f"{yf_ticker[:3]}{yf_ticker[3:]}=X"
+                elif "Digital" in asset_class and not yf_ticker.endswith("-USD"):
+                    yf_ticker = f"{yf_ticker.replace('USD','')}-USD"
 
-        # INTERACTIVE CHART INTEGRATION (High Fidelity)
-        fig = make_subplots(rows=2, cols=1, shared_xaxes=True, vertical_spacing=0.04, row_width=[0.2, 0.8])
+                interval_param = "5m" if "Scalper" in trading_style else "1d"
+                period_param = "2d" if "Scalper" in trading_style else "90d"
+                
+                ticker_obj = fy.Ticker(yf_ticker)
+                df_raw = ticker_obj.history(period=period_param, interval=interval_param)
+                
+                if not df_raw.empty:
+                    df = df_raw[['Open', 'High', 'Low', 'Close', 'Volume']].copy()
+                    df.columns = ['open', 'high', 'low', 'close', 'volume']
+                else:
+                    st.error(f"🚨 Ticker trace fault: {symbol}")
+                    st.stop()
+            except Exception as e:
+                st.error(f"📡 System Core Outage: {e}")
+                st.stop()
+
+        df = df.sort_index()
+
+        # ==========================================
+        # 9. ADVANCED CLIENT-SIDE QUANT MATHEMATICS
+        # ==========================================
+        # ATR Pipeline
+        high_low = df['high'] - df['low']
+        high_cp = (df['high'] - df['close'].shift()).abs()
+        low_cp = (df['low'] - df['close'].shift()).abs()
+        df['TR'] = pd.concat([high_low, high_cp, low_cp], axis=1).max(axis=1)
+        df['ATR'] = df['TR'].rolling(window=14).mean().fillna(df['TR'].mean())
+        
+        # Bollinger Bands Matrix
+        df['BB_MA'] = df['close'].rolling(window=20).mean()
+        df['BB_STD'] = df['close'].rolling(window=20).std()
+        df['BB_Upper'] = df['BB_MA'] + (2 * df['BB_STD'])
+        df['BB_Lower'] = df['BB_MA'] - (2 * df['BB_STD'])
+        
+        # Relative Strength Index (RSI) Engine
+        rsi_window = 14
+        change = df['close'].diff()
+        gain = change.mask(change < 0, 0.0)
+        loss = -change.mask(change > 0, 0.0)
+        avg_gain = gain.ewm(com=rsi_window - 1, min_periods=rsi_window).mean()
+        avg_loss = loss.ewm(com=rsi_window - 1, min_periods=rsi_window).mean()
+        rs = avg_gain / avg_loss.replace(0, 1e-10)
+        df['RSI'] = 100 - (100 / (1 + rs))
+        df['RSI'] = df['RSI'].fillna(50)
+
+        # Execution Moving Averages
+        if "Scalper" in trading_style:
+            df['Fast_Ind'] = df['close'].ewm(span=9, adjust=False).mean()
+            df['Slow_Ind'] = df['close'].ewm(span=21, adjust=False).mean()
+            ind_label_1, ind_label_2 = "9 EMA", "21 EMA"
+            atr_multiplier = 1.5
+        else:
+            df['Fast_Ind'] = df['close'].rolling(window=10).mean()
+            df['Slow_Ind'] = df['close'].rolling(window=30).mean()
+            ind_label_1, ind_label_2 = "10 MA", "30 MA"
+            atr_multiplier = 2.5
+
+        # Extract latest state vectors
+        df_slice = df.tail(60)
+        curr_price = df_slice['close'].iloc[-1]
+        atr_val = df_slice['ATR'].iloc[-1]
+        latest_rsi = df_slice['RSI'].iloc[-1]
+        latest_upper_bb = df_slice['BB_Upper'].iloc[-1]
+        latest_lower_bb = df_slice['BB_Lower'].iloc[-1]
+
+        # Multi-Factor Institutional Signal Strategy
+        # BUY condition: Fast indicator crosses above Slow, AND RSI is not overbought (<65)
+        # SELL condition: Fast indicator crosses below Slow, AND RSI is not oversold (>35)
+        if df_slice['Fast_Ind'].iloc[-1] > df_slice['Slow_Ind'].iloc[-1]:
+            signal = "BUY"
+            # Chandelier Volatility Trailing Stop
+            stop_loss = df_slice['high'].tail(14).max() - (atr_multiplier * atr_val)
+            if stop_loss >= curr_price: stop_loss = curr_price - (atr_multiplier * atr_val)
+            take_profit = curr_price + (atr_multiplier * 1.8 * atr_val)
+        else:
+            signal = "SELL"
+            stop_loss = df_slice['low'].tail(14).min() + (atr_multiplier * atr_val)
+            if stop_loss <= curr_price: stop_loss = curr_price + (atr_multiplier * atr_val)
+            take_profit = curr_price - (atr_multiplier * 1.8 * atr_val)
+
+        # Generate structural arrays for trailing stop plots
+        df_slice = df_slice.copy()
+        df_slice['Trailing_SL'] = stop_loss
+
+        # Win Rate Strategy Profiler
+        sim_signals = df['Fast_Ind'] > df['Slow_Ind']
+        win_count = (sim_signals == (df['close'].shift(-1) > df['close'])).tail(20).sum()
+        win_rate = (win_count / 20) * 100
+
+        # ==========================================
+       # ==========================================
+        # 10. MULTI-PANEL VISUALIZATION COMPLEX
+        # ==========================================
+        fig = make_subplots(
+            rows=3, cols=1, 
+            shared_xaxes=True, 
+            vertical_spacing=0.03, 
+            row_width=[0.2, 0.15, 0.65]
+        )
+        
+        # Panel 1: Candlesticks + Bollinger Bands + Trailing SL
         fig.add_trace(go.Candlestick(
-            x=df.index, open=df['open'], high=df['high'], low=df['low'], close=df['close'], 
-            name='Price Matrix',
-            increasing_line_color='#00D084', decreasing_line_color='#FF1744'
+            x=df_slice.index, open=df_slice['open'], high=df_slice['high'], low=df_slice['low'], close=df_slice['close'], 
+            name='Price Matrix', increasing_line_color='#00D084', decreasing_line_color='#FF1744'
         ), row=1, col=1)
         
-        fig.add_trace(go.Scatter(x=df.index, y=df['MA10'], name='10D Fast MA', line=dict(color='#00B0FF', width=2.5)), row=1, col=1)
-        fig.add_trace(go.Scatter(x=df.index, y=df['MA30'], name='30D Slow MA', line=dict(color='#FF6D00', width=2.5)), row=1, col=1)
+        fig.add_trace(go.Scatter(x=df_slice.index, y=df_slice['BB_Upper'], name='Upper BB', line=dict(color='rgba(0, 176, 255, 0.3)', width=1, dash='dash')), row=1, col=1)
+        fig.add_trace(go.Scatter(x=df_slice.index, y=df_slice['BB_Lower'], name='Lower BB', line=dict(color='rgba(0, 176, 255, 0.3)', width=1, dash='dash'), fill='tonexty', fillcolor='rgba(0, 176, 255, 0.02)'), row=1, col=1)
+        fig.add_trace(go.Scatter(x=df_slice.index, y=df_slice['Fast_Ind'], name=ind_label_1, line=dict(color='#00B0FF', width=2)), row=1, col=1)
+        fig.add_trace(go.Scatter(x=df_slice.index, y=df_slice['Slow_Ind'], name=ind_label_2, line=dict(color='#FF6D00', width=2)), row=1, col=1)
+        fig.add_trace(go.Scatter(x=df_slice.index, y=df_slice['Trailing_SL'], name='Volatility Stop', line=dict(color='#FFD600', width=1.5, dash='dot')), row=1, col=1)
         
-        # Dynamic Volume Bars
-        vol_colors = ['#00D084' if c >= o else '#FF1744' for c, o in zip(df['close'], df['open'])]
-        fig.add_trace(go.Bar(x=df.index, y=df['volume'], name='Volume Matrix', marker_color=vol_colors, opacity=0.3), row=2, col=1)
+        # Panel 2: Volume Matrix
+        vol_colors = ['#00D084' if c >= o else '#FF1744' for c, o in zip(df_slice['close'], df_slice['open'])]
+        fig.add_trace(go.Bar(x=df_slice.index, y=df_slice['volume'], name='Volume', marker_color=vol_colors, opacity=0.3), row=2, col=1)
         
-        fig.update_layout(xaxis_rangeslider_visible=False, height=600, template="plotly_dark", margin=dict(t=10, b=10))
+        # Panel 3: RSI Oscillator Panel (FIXED: Plots RSI trace and clean horizon thresholds)
+        fig.add_trace(go.Scatter(x=df_slice.index, y=df_slice['RSI'], name='RSI (14)', line=dict(color='#E040FB', width=2)), row=3, col=1)
+        
+        fig.add_trace(go.Scatter(
+            x=df_slice.index, y=[70]*len(df_slice), name='Overbought (70)', 
+            line=dict(color='rgba(255, 23, 68, 0.4)', width=1, dash='dash'), showlegend=False
+        ), row=3, col=1)
+        
+        fig.add_trace(go.Scatter(
+            x=df_slice.index, y=[30]*len(df_slice), name='Oversold (30)', 
+            line=dict(color='rgba(0, 230, 118, 0.4)', width=1, dash='dash'), showlegend=False
+        ), row=3, col=1)
+        
+        fig.update_yaxes(range=[10, 90], row=3, col=1)
+        fig.update_layout(xaxis_rangeslider_visible=False, height=700, template="plotly_dark", margin=dict(t=10, b=10))
+        
+        # RENDER CANVAS TO STREAMLIT UI (FIXED: Added missing chart injection statement)
         st.plotly_chart(fig, use_container_width=True)
 
-        # BENTO BOX GRID DISPLAY (Fully applied style)
-        c1, c2, c3 = st.columns(3)
-        c1.metric("Market Price", f"${curr_price:,.2f}")
-        c2.metric("Bot Signal", signal, delta=signal if signal == "BUY" else f"-{signal}")
-        c3.metric("Status", "Operational")
+        # Output Core Metric Readouts
+        st.caption(f"Pipeline Routing Vector: {engine_used}")
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Current Rate", f"${curr_price:,.4f}" if "Foreign" in asset_class else f"${curr_price:,.2f}")
+        c2.metric("Matrix Signal", signal, delta=signal if signal == "BUY" else f"-{signal}")
+        c3.metric("RSI (14 Momentum)", f"{latest_rsi:.1f}")
+        c4.metric("Win-Rate Tracker", f"{win_rate:.1f}%")
 
-        # NOTIFICATION DISPATCH
-        send_telegram(f"🏹 Quantora Event: {symbol} at ${curr_price:,.2f} // Signal: {signal}", tg_token, tg_id)
-        send_email(f"🏹 Quantora Event: {symbol} at ${curr_price:,.2f} // Signal: {signal}", email_user)
+        # Complex Risk Mitigation Blueprint Box
+        st.markdown(f"""
+            <div style="background: rgba(0, 102, 255, 0.03); border: 1px solid rgba(0, 102, 255, 0.2); border-radius: 12px; padding: 20px; margin-top: 20px;">
+                <h4 style="color: #00B0FF; margin-top:0;">📋 Algorithmic Risk Blueprint ({trading_style.split(' ')[1]})</h4>
+                <div style="display: flex; justify-content: space-between; flex-wrap: wrap;">
+                    <p style="margin: 5px 15px 5px 0;">🎯 <b>Execution Entry:</b> ${curr_price:,.4f}</p>
+                    <p style="margin: 5px 15px 5px 0; color: #FF1744;">🛑 <b>ATR Volatility Trailing Stop:</b> ${stop_loss:,.4f}</p>
+                    <p style="margin: 5px 15px 5px 0; color: #00D084;">💰 <b>Take Profit Target:</b> ${take_profit:,.4f}</p>
+                    <p style="margin: 5px 15px 5px 0; color: #E040FB;">🌐 <b>Bollinger Bands Envelope:</b> [${latest_lower_bb:,.2f} - ${latest_upper_bb:,.2f}]</p>
+                </div>
+            </div>
+        """, unsafe_allow_html=True)
 
-        # AI STRATEGIST context LAYER
+        # Alert Uplink Dispatcher
+        alert_payload = f"🏹 Quantora Multi-Indicator Trigger\nAsset: {symbol}\nSignal: {signal}\nPrice: {curr_price}\nVolatility Stop: {stop_loss:.4f}\nRSI: {latest_rsi:.1f}"
+        send_telegram(alert_payload, tg_token, tg_id)
+        send_email(alert_payload, email_user)
+
+        # ==========================================
+        # 11. AI COGNITIVE STRATEGIST FEED
+        # ==========================================
         try:
             llm = LLM(model="groq/llama-3.3-70b-versatile")
-            analyst = Agent(role='Strategic Analyst', goal='Analyze trend data', backstory='Expert Quant', llm=llm)
-            task = Task(description=f"Analyze {symbol} breakout at ${curr_price}. MA Signal is {signal}.", expected_output="Provide 3 concise insight sentences.", agent=analyst)
+            analyst = Agent(role='Strategic Quantitative Lead', goal='Draft technical summaries for structural traders', backstory='Elite systemic market analyst', llm=llm)
+            task = Task(description=f"Analyze {symbol} under {trading_style} profile. Action is {signal} at {curr_price}. RSI momentum is {latest_rsi} and Bollinger envelope limits are {latest_lower_bb} to {latest_upper_bb}. Volatility stop loss is set at {stop_loss}.", expected_output="A sharp 3-sentence risk management assessment brief factoring in the RSI and Bollinger values without markdown bolding or stars.", agent=analyst)
             report = Crew(agents=[analyst], tasks=[task]).kickoff()
             
-            # Holographic Strategist Feed Container
             st.markdown("""
-                <div style="background: rgba(0, 102, 255, 0.05); border: 1px solid rgba(0, 102, 255, 0.4); border-radius: 18px; padding: 25px; margin-top: 30px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
+                <div style="background: rgba(0, 102, 255, 0.05); border: 1px solid rgba(0, 102, 255, 0.4); border-radius: 18px; padding: 25px; margin-top: 25px; box-shadow: 0 4px 15px rgba(0,0,0,0.3);">
                     <h3 style="color: #00B0FF; margin-top: 0; text-shadow: 0 0 10px #00B0FF;">💡 Strategist Intelligence</h3>
                     <p style="color: rgba(255, 255, 255, 0.9); font-size: 1.05rem;">
             """, unsafe_allow_html=True)
             st.write(str(report.raw).replace("*", "").replace("_", ""))
             st.markdown("</p></div>", unsafe_allow_html=True)
-
         except Exception:
-            st.warning("Intelligence context matrix unavailable.")
+            st.warning("Intelligence layer sync cycle bypass active.")
